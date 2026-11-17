@@ -1,4 +1,5 @@
 import { TEACHERS } from './teachers.js';
+import { SHARED, cleanName, topScores, saveScore } from './scores.js';
 
 // ---- Tuning ---------------------------------------------------------------
 const LIVES = 5;
@@ -111,7 +112,77 @@ function endGame() {
   } catch { best = Math.max(best, score); }
   $('best').textContent = score >= best && score > 0 ? 'Nieuw persoonlijk record!' : `Jouw record: ${best}`;
   overScreen.hidden = false;
+  $('againBtn').focus();
+  submitScore(playerName, score);
 }
+
+// ---- Player name & highscores ---------------------------------------------
+const nameInput = $('playerName');
+let playerName = '';
+try { playerName = cleanName(localStorage.getItem('gravity-name')); } catch {}
+nameInput.value = playerName;
+
+$('startForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = cleanName(nameInput.value);
+  if (!name) { nameInput.value = ''; nameInput.focus(); return; }
+  playerName = name;
+  try { localStorage.setItem('gravity-name', name); } catch {}
+  startGame();
+});
+
+$('changeNameBtn').addEventListener('click', () => {
+  overScreen.hidden = true;
+  startScreen.hidden = false;
+  state = 'menu';
+  faces = []; pops = []; shards = [];
+  nameInput.focus();
+  nameInput.select();
+});
+
+async function submitScore(name, value) {
+  const status = $('saveStatus');
+  if (value < 1) { status.textContent = ''; return; }
+  status.textContent = 'Score opslaan…';
+  try {
+    await saveScore(name, value);
+    const top = await refreshBoard();
+    const rank = top.findIndex((s) => s.name.toLowerCase() === name.toLowerCase() && s.score === value);
+    status.textContent = rank >= 0 ? `Je staat op plaats ${rank + 1} in de topscores!` : 'Score opgeslagen.';
+  } catch (err) {
+    console.error(err);
+    status.textContent = 'Score kon niet opgeslagen worden (geen verbinding?).';
+  }
+}
+
+const boardList = $('boardList');
+$('boardNote').textContent = SHARED ? '' : 'Alleen scores op dit toestel.';
+
+async function refreshBoard() {
+  let top = [];
+  try {
+    top = await topScores(10);
+  } catch (err) {
+    console.error(err);
+    if (!boardList.children.length) boardList.innerHTML = '<li class="empty">Kon topscores niet laden.</li>';
+    return top;
+  }
+  boardList.replaceChildren(...top.map((s) => {
+    const li = document.createElement('li');
+    if (playerName && s.name.toLowerCase() === playerName.toLowerCase()) li.classList.add('me');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = s.name;
+    const v = document.createElement('span'); v.className = 's'; v.textContent = s.score;
+    li.append(n, v);
+    return li;
+  }));
+  if (!top.length) boardList.innerHTML = '<li class="empty">Nog geen scores. Wees de eerste!</li>';
+  return top;
+}
+
+$('refreshBtn').addEventListener('click', refreshBoard);
+refreshBoard();
+// Keep the board fresh between games (not during play, to keep the game smooth).
+setInterval(() => { if (state !== 'playing' && !document.hidden) refreshBoard(); }, 30000);
 
 function updateHud() {
   livesEl.textContent = '♥'.repeat(lives) + '♡'.repeat(LIVES - lives);
@@ -221,7 +292,6 @@ window.addEventListener('keydown', (e) => {
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 window.addEventListener('blur', pause);
 
-$('startBtn').addEventListener('click', startGame);
 $('againBtn').addEventListener('click', startGame);
 
 // ---- Loop -----------------------------------------------------------------

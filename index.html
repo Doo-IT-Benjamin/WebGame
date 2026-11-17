@@ -40,7 +40,11 @@
              <b class="g">groen</b> → <b class="o">oranje</b> → <b class="r">rood</b>.
              Is de rand rood? Dan laat je volgende tik de leerkracht knappen: 3 bonuspunten!</p>
           <p>Valt er een leerkracht op de grond, dan verlies je een leven. Je hebt er 5.</p>
-          <button id="startBtn">Start</button>
+          <form id="startForm" class="name-form" autocomplete="off">
+            <label for="playerName">Jouw naam</label>
+            <input id="playerName" name="name" maxlength="20" required placeholder="bv. Lotte uit 3B" enterkeyhint="go">
+            <button id="startBtn" type="submit">Start</button>
+          </form>
         </section>
 
         <section id="paused" class="overlay" hidden>
@@ -54,10 +58,19 @@
           <p>Jouw score</p>
           <p id="finalScore" class="big">0</p>
           <p id="best"></p>
+          <p id="saveStatus" class="small"></p>
           <button id="againBtn">Opnieuw spelen</button>
+          <button id="changeNameBtn" class="ghost">Andere naam</button>
         </section>
       </div>
     </div>
+
+    <aside class="board" aria-labelledby="boardTitle">
+      <h2 id="boardTitle">Topscores</h2>
+      <p id="boardNote" class="small"></p>
+      <ol id="boardList"></ol>
+      <button id="refreshBtn" class="ghost small-btn">Vernieuwen</button>
+    </aside>
   </main>
 
   <script type="module" src="src/game.js"></script>

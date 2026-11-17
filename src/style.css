@@ -25,9 +25,47 @@ body {
 .site-bar .tagline { opacity: .85; }
 
 .page {
-  flex: 1; width: 100%; max-width: 900px; margin: 0 auto;
-  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 16px;
+  display: grid; gap: 12px 20px; align-content: start;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-areas: "titles titles" "game board";
 }
+.titles { grid-area: titles; }
+.window { grid-area: game; }
+.board  { grid-area: board; }
+@media (max-width: 860px) {
+  .page { grid-template-columns: minmax(0, 1fr); grid-template-areas: "titles" "game" "board"; }
+}
+
+/* Highscores */
+.board {
+  background: var(--paper); border-top: 4px solid var(--red); border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(34, 34, 34, .1); padding: 14px 16px; align-self: start;
+}
+.board h2 { margin: 0; color: var(--red); text-transform: uppercase; letter-spacing: .06em; font-size: 26px; }
+.board ol { list-style: none; margin: 8px 0 0; padding: 0; counter-reset: rank; }
+.board li {
+  counter-increment: rank; display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: baseline;
+  padding: 6px 0; border-bottom: 1px solid var(--mist); font-size: 19px;
+}
+.board li::before { content: counter(rank) "."; color: var(--slate); font-weight: 600; }
+.board li:nth-child(1)::before { color: var(--orange); }
+.board li .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board li .s { font-weight: 700; color: var(--red); }
+.board li.me { background: #fff4ef; margin: 0 -8px; padding: 6px 8px; border-radius: 3px; }
+.board .empty { color: var(--slate); font-style: italic; }
+.small { font-size: 15px !important; color: var(--slate); margin: 4px 0 0; }
+.small-btn { font-size: 16px; padding: 4px 16px; margin-top: 10px; }
+
+/* Name entry */
+.name-form { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 10px; margin-top: 8px; }
+.name-form label { width: 100%; font-weight: 600; color: var(--ink); font-size: 18px; }
+.name-form input {
+  font: inherit; font-size: 22px; padding: 7px 12px; width: min(260px, 70vw);
+  border: 2px solid var(--slate); border-radius: 3px; color: var(--ink); background: #fff;
+}
+.name-form input:focus { outline: none; border-color: var(--orange); }
+.name-form button { margin-top: 0; }
 .titles { text-align: center; }
 .titles h1 {
   margin: 0; font-size: clamp(40px, 9vw, 72px); font-weight: 700; line-height: 1;

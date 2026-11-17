@@ -9,6 +9,20 @@ A small juggling game for Gedichtendag (theme: *Gravity*) at Sint-Catharinacolle
 
 Teachers without a photo show as a coloured circle with their initials.
 
+## Highscores (Supabase)
+
+Players enter their name before starting; scores go to a shared top-10 list next to the game.
+Until Supabase is configured, the list only shows scores from the current device.
+
+1. Create a free project at https://supabase.com.
+2. In the project: **SQL Editor → New query**, paste `supabase/setup.sql`, click **Run**.
+3. Copy the **Project URL** and the **publishable / anon public key** into `src/config.js`
+   (never the secret / service_role key), then push.
+
+To remove an inappropriate name: **Table Editor → scores**, select the row, delete.
+Note: scores are submitted by the browser, so a determined student could post a fake score;
+the database only limits names to 20 characters and scores to 1–100000.
+
 ## Tuning
 
 Difficulty settings (gravity, how fast new teachers join, max on screen) are at the top of `src/game.js`.
