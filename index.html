@@ -3,32 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Gravity</title>
+  <title>Gravity · Sint-Catharinacollege</title>
+  <meta name="theme-color" content="#a61e29">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
-  <canvas id="game" aria-label="Game"></canvas>
+  <header class="site-bar">
+    <span class="school">Sint-Catharinacollege Geraardsbergen</span>
+    <span class="tagline">Poetry Day</span>
+  </header>
 
-  <div id="hud" hidden>
-    <span id="lives" aria-label="Lives"></span>
-    <span id="score">0</span>
-  </div>
+  <main class="page">
+    <div class="titles">
+      <h1>Gravity</h1>
+      <p class="sub">Keep the teachers in the air.</p>
+    </div>
 
-  <section id="start" class="overlay">
-    <h1>Gravity</h1>
-    <p class="verse">What falls must rise again —<br>if you are quick enough.</p>
-    <p>Teachers are falling! Click or tap them while they drop to launch them back up.<br>
-       Let one hit the ground and you lose a life. You have 5.</p>
-    <button id="startBtn">Start</button>
-  </section>
+    <div class="window">
+      <div class="window-bar">
+        <span id="lives" aria-label="Lives"></span>
+        <span id="score" aria-label="Score">0</span>
+        <button id="pauseBtn" class="icon-btn" aria-label="Pause" title="Pause (P)" disabled>❚❚</button>
+      </div>
 
-  <section id="over" class="overlay" hidden>
-    <h1>Game over</h1>
-    <p>Your score</p>
-    <p id="finalScore" class="big">0</p>
-    <p id="best"></p>
-    <button id="againBtn">Play again</button>
-  </section>
+      <div class="stage" id="stage">
+        <canvas id="game" aria-label="Game"></canvas>
+
+        <section id="start" class="overlay">
+          <p class="verse">What falls must rise again —<br>if you are quick enough.</p>
+          <p>Teachers are falling! Click or tap them while they drop to launch them back up.
+             Let one hit the ground and you lose a life. You have 5.</p>
+          <button id="startBtn">Start</button>
+        </section>
+
+        <section id="paused" class="overlay" hidden>
+          <p class="kicker">Paused</p>
+          <button id="resumeBtn">Resume</button>
+          <button id="quitBtn" class="ghost">Quit</button>
+        </section>
+
+        <section id="over" class="overlay" hidden>
+          <p class="kicker">Game over</p>
+          <p>Your score</p>
+          <p id="finalScore" class="big">0</p>
+          <p id="best"></p>
+          <button id="againBtn">Play again</button>
+        </section>
+      </div>
+    </div>
+  </main>
 
   <script type="module" src="src/game.js"></script>
 </body>

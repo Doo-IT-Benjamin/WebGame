@@ -15,25 +15,27 @@ const HIT_SLOP = 1.25;          // click radius multiplier (forgiving on touch)
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const $ = (id) => document.getElementById(id);
-const hud = $('hud'), livesEl = $('lives'), scoreEl = $('score');
-const startScreen = $('start'), overScreen = $('over');
+const stage = $('stage'), livesEl = $('lives'), scoreEl = $('score');
+const startScreen = $('start'), overScreen = $('over'), pausedScreen = $('paused');
+const pauseBtn = $('pauseBtn');
 
 let W = 0, H = 0, R = 40; // canvas size (css px) and face radius
+const TOP = 0;             // top edge of the play area
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  W = window.innerWidth;
-  H = window.innerHeight;
+  W = stage.clientWidth;
+  H = stage.clientHeight;
   canvas.width = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   R = Math.max(32, Math.min(56, Math.min(W, H) * 0.08));
 }
-window.addEventListener('resize', resize);
+new ResizeObserver(resize).observe(stage);
 resize();
 
 // Preload teacher photos; fall back to initials if missing/broken.
-const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#14b8a6', '#ec4899', '#eab308'];
+const COLORS = ['#a61e29', '#ef4423', '#434f58', '#7a1620', '#c2410c', '#5e6a74'];
 const teachers = TEACHERS.map((t, i) => {
   const entry = {
     name: t.name,
@@ -50,7 +52,7 @@ const teachers = TEACHERS.map((t, i) => {
 });
 
 // ---- Game state -----------------------------------------------------------
-let state = 'menu'; // menu | playing | over
+let state = 'menu'; // menu | playing | paused | over
 let faces = [];
 let pops = [];      // little "+1" / "-1" effects
 let score = 0, lives = LIVES, elapsed = 0, gravity = GRAVITY_START;
@@ -82,13 +84,14 @@ function startGame() {
   state = 'playing';
   startScreen.hidden = true;
   overScreen.hidden = true;
-  hud.hidden = false;
+  pausedScreen.hidden = true;
+  pauseBtn.disabled = false;
   updateHud();
 }
 
 function endGame() {
   state = 'over';
-  hud.hidden = true;
+  pauseBtn.disabled = true;
   $('finalScore').textContent = score;
   let best = 0;
   try {
@@ -107,7 +110,8 @@ function updateHud() {
 // ---- Input ----------------------------------------------------------------
 canvas.addEventListener('pointerdown', (e) => {
   if (state !== 'playing') return;
-  const px = e.clientX, py = e.clientY;
+  const rect = canvas.getBoundingClientRect();
+  const px = e.clientX - rect.left, py = e.clientY - rect.top;
   // Topmost face first (last drawn).
   for (let i = faces.length - 1; i >= 0; i--) {
     const f = faces[i];
@@ -118,7 +122,7 @@ canvas.addEventListener('pointerdown', (e) => {
     launch(f, dx);
     score++;
     updateHud();
-    pops.push({ x: f.x, y: f.y - R, text: '+1', color: '#fbbf24', t: 0 });
+    pops.push({ x: f.x, y: f.y - R, text: '+1', color: '#ef4423', t: 0 });
     return;
   }
 });
@@ -134,8 +138,41 @@ function launch(f, dx) {
 }
 
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__game = { get faces() { return faces; }, get score() { return score; }, get lives() { return lives; }, get state() { return state; }, step: (dt) => { if (state === 'playing') update(dt); draw(); } };
+  window.__game = { get faces() { return faces; }, get score() { return score; }, get lives() { return lives; }, get state() { return state; }, pause, resume, step: (dt) => { if (state === 'playing') update(dt); draw(); } };
 }
+
+function pause() {
+  if (state !== 'playing') return;
+  state = 'paused';
+  pausedScreen.hidden = false;
+  pauseBtn.textContent = '▶';
+  pauseBtn.setAttribute('aria-label', 'Resume');
+  $('resumeBtn').focus();
+}
+function resume() {
+  if (state !== 'paused') return;
+  state = 'playing';
+  pausedScreen.hidden = true;
+  pauseBtn.textContent = '❚❚';
+  pauseBtn.setAttribute('aria-label', 'Pause');
+  last = performance.now(); // don't jump forward after the pause
+}
+function quit() {
+  resume();
+  state = 'menu';
+  faces = []; pops = [];
+  pauseBtn.disabled = true;
+  startScreen.hidden = false;
+}
+pauseBtn.addEventListener('click', () => (state === 'paused' ? resume() : pause()));
+$('resumeBtn').addEventListener('click', resume);
+$('quitBtn').addEventListener('click', quit);
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') state === 'paused' ? resume() : pause();
+});
+// Auto-pause when the tab or window loses focus.
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+window.addEventListener('blur', pause);
 
 $('startBtn').addEventListener('click', startGame);
 $('againBtn').addEventListener('click', startGame);
@@ -174,12 +211,12 @@ function update(dt) {
 
     if (f.x < R) { f.x = R; f.vx = Math.abs(f.vx); }
     if (f.x > W - R) { f.x = W - R; f.vx = -Math.abs(f.vx); }
-    if (f.y < R && f.vy < 0) { f.y = R; f.vy = 0; } // don't fly off the top
+    if (f.y < TOP + R && f.vy < 0) { f.y = TOP + R; f.vy = 0; } // don't fly off the top
 
     if (f.y - R > H) {
       lives--;
       updateHud();
-      pops.push({ x: f.x, y: H - 30, text: '−♥', color: '#ef4444', t: 0 });
+      pops.push({ x: f.x, y: H - 30, text: '−♥', color: '#a61e29', t: 0 });
       f.waiting = RESPAWN_DELAY;
       if (lives <= 0) { endGame(); return; }
     }
@@ -192,15 +229,15 @@ function update(dt) {
 // ---- Drawing --------------------------------------------------------------
 function draw() {
   ctx.clearRect(0, 0, W, H);
-  drawStars();
+  drawBackground();
   // ground line
-  ctx.fillStyle = 'rgba(239,68,68,.35)';
-  ctx.fillRect(0, H - 4, W, 4);
+  ctx.fillStyle = '#a61e29';
+  ctx.fillRect(0, H - 6, W, 6);
 
   for (const f of faces) if (f.waiting <= 0) drawFace(f);
 
   ctx.textAlign = 'center';
-  ctx.font = 'bold 28px Georgia, serif';
+  ctx.font = "700 32px 'Barlow Semi Condensed', Arial, sans-serif";
   for (const p of pops) {
     ctx.globalAlpha = 1 - p.t / 0.8;
     ctx.fillStyle = p.color;
@@ -209,13 +246,24 @@ function draw() {
   ctx.globalAlpha = 1;
 }
 
-const stars = Array.from({ length: 80 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.5 + 0.3 }));
-function drawStars() {
-  ctx.fillStyle = 'rgba(255,255,255,.6)';
-  for (const s of stars) {
-    ctx.beginPath();
-    ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
-    ctx.fill();
+// Faint words of a poem drifting down in the background — the "Gravity" theme.
+const WORDS = 'what falls must rise again if you are quick enough gravity pulls every word down to the page'.split(' ');
+const drift = Array.from({ length: 28 }, () => ({
+  x: Math.random(), y: Math.random(), w: WORDS[Math.floor(Math.random() * WORDS.length)],
+  v: 0.01 + Math.random() * 0.02, size: 14 + Math.random() * 18,
+}));
+let lastBg = performance.now();
+function drawBackground() {
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - lastBg) / 1000);
+  lastBg = now;
+  ctx.fillStyle = 'rgba(67,79,88,.09)';
+  ctx.textAlign = 'center';
+  for (const d of drift) {
+    d.y += d.v * dt;
+    if (d.y > 1.05) { d.y = -0.05; d.x = Math.random(); }
+    ctx.font = `italic ${d.size}px 'Barlow Semi Condensed', Arial, sans-serif`;
+    ctx.fillText(d.w, d.x * W, TOP + d.y * (H - TOP));
   }
 }
 
@@ -240,7 +288,7 @@ function drawFace(f) {
     ctx.fillStyle = t.color;
     ctx.fillRect(-R, -R, 2 * R, 2 * R);
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${Math.round(R * 0.8)}px Georgia, serif`;
+    ctx.font = `700 ${Math.round(R * 0.85)}px 'Barlow Semi Condensed', Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(t.initials, 0, 2);
@@ -248,7 +296,9 @@ function drawFace(f) {
   ctx.restore();
 
   ctx.lineWidth = 4;
-  ctx.strokeStyle = f.vy > 0 ? '#fbbf24' : 'rgba(255,255,255,.5)';
+  ctx.strokeStyle = f.vy > 0 ? '#ef4423' : '#d4d4d4';
   ctx.stroke();
   ctx.restore();
 }
+
+updateHud();
