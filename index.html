@@ -2,16 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WebGame</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Gravity</title>
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
-  <main>
-    <h1>WebGame</h1>
-    <canvas id="game" width="480" height="320" aria-label="Game canvas"></canvas>
-    <p class="hint">Click the canvas to start.</p>
-  </main>
+  <canvas id="game" aria-label="Game"></canvas>
+
+  <div id="hud" hidden>
+    <span id="lives" aria-label="Lives"></span>
+    <span id="score">0</span>
+  </div>
+
+  <section id="start" class="overlay">
+    <h1>Gravity</h1>
+    <p class="verse">What falls must rise again —<br>if you are quick enough.</p>
+    <p>Teachers are falling! Click or tap them while they drop to launch them back up.<br>
+       Let one hit the ground and you lose a life. You have 5.</p>
+    <button id="startBtn">Start</button>
+  </section>
+
+  <section id="over" class="overlay" hidden>
+    <h1>Game over</h1>
+    <p>Your score</p>
+    <p id="finalScore" class="big">0</p>
+    <p id="best"></p>
+    <button id="againBtn">Play again</button>
+  </section>
+
   <script type="module" src="src/game.js"></script>
 </body>
 </html>
