@@ -8,5 +8,5 @@
 // only let it read scores and add new ones.
 //
 // While these are empty, highscores are only kept on the current device.
-export const SUPABASE_URL = '';
-export const SUPABASE_KEY = '';
+export const SUPABASE_URL = 'https://mlhmwmbprumdujtsrcle.supabase.co';
+export const SUPABASE_KEY = 'sb_publishable_wQ3YpchqZGUW9hnXwAqbZg_l_liuOXh';
