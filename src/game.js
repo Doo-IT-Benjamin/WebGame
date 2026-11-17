@@ -10,6 +10,11 @@ const NEW_FACE_EVERY = 10;      // s between extra faces joining
 const MAX_FACES = 6;
 const RESPAWN_DELAY = 1.2;      // s before a dropped face comes back
 const HIT_SLOP = 1.25;          // click radius multiplier (forgiving on touch)
+const MIN_HITS = 3, MAX_HITS = 6; // clicks a teacher takes before popping (random per teacher)
+const POP_BONUS = 3;            // extra points for popping a teacher
+
+// Ring colour shows how close a teacher is to popping.
+const RING_GREEN = '#2e9e4f', RING_ORANGE = '#f28c18', RING_RED = '#d62828';
 
 // ---- Setup ----------------------------------------------------------------
 const canvas = document.getElementById('game');
@@ -35,7 +40,7 @@ new ResizeObserver(resize).observe(stage);
 resize();
 
 // Preload teacher photos; fall back to initials if missing/broken.
-const COLORS = ['#a61e29', '#ef4423', '#434f58', '#7a1620', '#c2410c', '#5e6a74'];
+const COLORS = ['#434f58', '#5e6a74', '#2f3a42', '#6b7280', '#374151', '#4b5563'];
 const teachers = TEACHERS.map((t, i) => {
   const entry = {
     name: t.name,
@@ -55,6 +60,7 @@ const teachers = TEACHERS.map((t, i) => {
 let state = 'menu'; // menu | playing | paused | over
 let faces = [];
 let pops = [];      // little "+1" / "-1" effects
+let shards = [];    // burst particles when a teacher pops
 let score = 0, lives = LIVES, elapsed = 0, gravity = GRAVITY_START;
 let nextFaceAt = 0;
 let deck = [];
@@ -74,12 +80,14 @@ function spawnFace(face = {}) {
   face.spin = (Math.random() - 0.5) * 2;
   face.waiting = 0;
   face.squash = 0;
+  face.maxHits = MIN_HITS + Math.floor(Math.random() * (MAX_HITS - MIN_HITS + 1));
+  face.hits = 0;
   return face;
 }
 
 function startGame() {
   score = 0; lives = LIVES; elapsed = 0; gravity = GRAVITY_START;
-  faces = []; pops = []; deck = [];
+  faces = []; pops = []; shards = []; deck = [];
   nextFaceAt = FIRST_SPAWN_DELAY;
   state = 'playing';
   startScreen.hidden = true;
@@ -98,7 +106,7 @@ function endGame() {
     best = Number(localStorage.getItem('gravity-best') || 0);
     if (score > best) { best = score; localStorage.setItem('gravity-best', String(score)); }
   } catch { best = Math.max(best, score); }
-  $('best').textContent = score >= best && score > 0 ? 'New personal best!' : `Personal best: ${best}`;
+  $('best').textContent = score >= best && score > 0 ? 'Nieuw persoonlijk record!' : `Jouw record: ${best}`;
   overScreen.hidden = false;
 }
 
@@ -119,13 +127,40 @@ canvas.addEventListener('pointerdown', (e) => {
     const dx = px - f.x, dy = py - f.y;
     if (dx * dx + dy * dy > (R * HIT_SLOP) ** 2) continue;
     if (f.vy <= 0) return; // only counts while falling
-    launch(f, dx);
+    f.hits++;
     score++;
+    if (f.hits >= f.maxHits) {
+      score += POP_BONUS;
+      popFace(f);
+      pops.push({ x: f.x, y: f.y - R, text: `+${1 + POP_BONUS}`, color: RING_GREEN, t: 0, big: true });
+    } else {
+      launch(f, dx);
+      pops.push({ x: f.x, y: f.y - R, text: '+1', color: '#ef4423', t: 0 });
+    }
     updateHud();
-    pops.push({ x: f.x, y: f.y - R, text: '+1', color: '#ef4423', t: 0 });
     return;
   }
 });
+
+function popFace(f) {
+  const n = 18;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.3;
+    const sp = 180 + Math.random() * 220;
+    shards.push({
+      x: f.x + Math.cos(a) * R * 0.8, y: f.y + Math.sin(a) * R * 0.8,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120,
+      color: i % 3 === 0 ? f.teacher.color : RING_RED, size: 4 + Math.random() * 6, t: 0,
+    });
+  }
+  f.waiting = RESPAWN_DELAY; // a fresh teacher drops in after a moment
+}
+
+function ringColor(f) {
+  const left = f.maxHits - f.hits;
+  if (left <= 1) return RING_RED;
+  return left / f.maxHits > 0.5 ? RING_GREEN : RING_ORANGE;
+}
 
 function launch(f, dx) {
   // Launch high enough to reach roughly the top third of the screen.
@@ -138,7 +173,7 @@ function launch(f, dx) {
 }
 
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__game = { get faces() { return faces; }, get score() { return score; }, get lives() { return lives; }, get state() { return state; }, pause, resume, step: (dt) => { if (state === 'playing') update(dt); draw(); } };
+  window.__game = { get faces() { return faces; }, get score() { return score; }, get lives() { return lives; }, get state() { return state; }, get shards() { return shards; }, pause, resume, step: (dt) => { if (state === 'playing') update(dt); draw(); } };
 }
 
 function pause() {
@@ -146,7 +181,7 @@ function pause() {
   state = 'paused';
   pausedScreen.hidden = false;
   pauseBtn.textContent = '▶';
-  pauseBtn.setAttribute('aria-label', 'Resume');
+  pauseBtn.setAttribute('aria-label', 'Hervat');
   $('resumeBtn').focus();
 }
 function resume() {
@@ -154,13 +189,13 @@ function resume() {
   state = 'playing';
   pausedScreen.hidden = true;
   pauseBtn.textContent = '❚❚';
-  pauseBtn.setAttribute('aria-label', 'Pause');
+  pauseBtn.setAttribute('aria-label', 'Pauzeer');
   last = performance.now(); // don't jump forward after the pause
 }
 function quit() {
   resume();
   state = 'menu';
-  faces = []; pops = [];
+  faces = []; pops = []; shards = [];
   pauseBtn.disabled = true;
   startScreen.hidden = false;
 }
@@ -224,6 +259,13 @@ function update(dt) {
 
   for (const p of pops) p.t += dt;
   pops = pops.filter((p) => p.t < 0.8);
+  for (const sh of shards) {
+    sh.t += dt;
+    sh.vy += gravity * 0.6 * dt;
+    sh.x += sh.vx * dt;
+    sh.y += sh.vy * dt;
+  }
+  shards = shards.filter((sh) => sh.t < 0.7);
 }
 
 // ---- Drawing --------------------------------------------------------------
@@ -236,9 +278,17 @@ function draw() {
 
   for (const f of faces) if (f.waiting <= 0) drawFace(f);
 
+  for (const sh of shards) {
+    ctx.globalAlpha = 1 - sh.t / 0.7;
+    ctx.fillStyle = sh.color;
+    ctx.beginPath();
+    ctx.arc(sh.x, sh.y, sh.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   ctx.textAlign = 'center';
-  ctx.font = "700 32px 'Barlow Semi Condensed', Arial, sans-serif";
   for (const p of pops) {
+    ctx.font = `700 ${p.big ? 44 : 32}px 'Barlow Semi Condensed', Arial, sans-serif`;
     ctx.globalAlpha = 1 - p.t / 0.8;
     ctx.fillStyle = p.color;
     ctx.fillText(p.text, p.x, p.y - p.t * 60);
@@ -247,7 +297,7 @@ function draw() {
 }
 
 // Faint words of a poem drifting down in the background — the "Gravity" theme.
-const WORDS = 'what falls must rise again if you are quick enough gravity pulls every word down to the page'.split(' ');
+const WORDS = 'wat valt moet weer rijzen als jij maar snel genoeg bent zwaartekracht trekt elk woord naar het blad'.split(' ');
 const drift = Array.from({ length: 28 }, () => ({
   x: Math.random(), y: Math.random(), w: WORDS[Math.floor(Math.random() * WORDS.length)],
   v: 0.01 + Math.random() * 0.02, size: 14 + Math.random() * 18,
@@ -295,9 +345,11 @@ function drawFace(f) {
   }
   ctx.restore();
 
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = f.vy > 0 ? '#ef4423' : '#d4d4d4';
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = ringColor(f);
+  ctx.globalAlpha = f.vy > 0 ? 1 : 0.45; // faded while rising (can't be clicked then)
   ctx.stroke();
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 

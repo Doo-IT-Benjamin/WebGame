@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Gravity · Sint-Catharinacollege</title>
+  <title>Zwaartekracht · Sint-Catharinacollege</title>
   <meta name="theme-color" content="#a61e29">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,44 +13,48 @@
 <body>
   <header class="site-bar">
     <span class="school">Sint-Catharinacollege Geraardsbergen</span>
-    <span class="tagline">Poetry Day</span>
+    <span class="tagline">Gedichtendag</span>
   </header>
 
   <main class="page">
     <div class="titles">
-      <h1>Gravity</h1>
-      <p class="sub">Keep the teachers in the air.</p>
+      <h1>Zwaartekracht</h1>
+      <p class="sub">Hou de leerkrachten in de lucht</p>
     </div>
 
     <div class="window">
       <div class="window-bar">
-        <span id="lives" aria-label="Lives"></span>
+        <span id="lives" aria-label="Levens"></span>
         <span id="score" aria-label="Score">0</span>
-        <button id="pauseBtn" class="icon-btn" aria-label="Pause" title="Pause (P)" disabled>❚❚</button>
+        <button id="pauseBtn" class="icon-btn" aria-label="Pauzeer" title="Pauzeer (P)" disabled>❚❚</button>
       </div>
 
       <div class="stage" id="stage">
-        <canvas id="game" aria-label="Game"></canvas>
+        <canvas id="game" aria-label="Spel"></canvas>
 
         <section id="start" class="overlay">
-          <p class="verse">What falls must rise again —<br>if you are quick enough.</p>
-          <p>Teachers are falling! Click or tap them while they drop to launch them back up.
-             Let one hit the ground and you lose a life. You have 5.</p>
+          <p class="verse">Wat valt, moet weer rijzen —<br>als jij maar snel genoeg bent.</p>
+          <p>De leerkrachten vallen! Klik of tik op hen terwijl ze vallen
+             om ze weer omhoog te schieten. Elke tik is 1 punt.</p>
+          <p>De rand toont hoeveel tikken er nog nodig zijn:
+             <b class="g">groen</b> → <b class="o">oranje</b> → <b class="r">rood</b>.
+             Is de rand rood? Dan laat je volgende tik de leerkracht knappen: 3 bonuspunten!</p>
+          <p>Valt er een leerkracht op de grond, dan verlies je een leven. Je hebt er 5.</p>
           <button id="startBtn">Start</button>
         </section>
 
         <section id="paused" class="overlay" hidden>
-          <p class="kicker">Paused</p>
-          <button id="resumeBtn">Resume</button>
-          <button id="quitBtn" class="ghost">Quit</button>
+          <p class="kicker">Gepauzeerd</p>
+          <button id="resumeBtn">Verder spelen</button>
+          <button id="quitBtn" class="ghost">Stoppen</button>
         </section>
 
         <section id="over" class="overlay" hidden>
           <p class="kicker">Game over</p>
-          <p>Your score</p>
+          <p>Jouw score</p>
           <p id="finalScore" class="big">0</p>
           <p id="best"></p>
-          <button id="againBtn">Play again</button>
+          <button id="againBtn">Opnieuw spelen</button>
         </section>
       </div>
     </div>
