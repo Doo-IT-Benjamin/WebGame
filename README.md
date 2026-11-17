@@ -1,6 +1,6 @@
 # Zwaartekracht (Gravity)
 
-A small juggling game for Gedichtendag (theme: *Gravity*) at Sint-Catharinacollege Geraardsbergen. Teachers fall down; click or tap them while they drop to launch them back up (+1). Each teacher pops after a random 3–6 clicks (+3 bonus); the ring colour goes green → orange → red as it gets close. Let one hit the ground and you lose a life — 5 lives, then game over with your score. The game text is in Dutch.
+A small juggling game for Poëziedag (theme: *Gravity*) at Sint-Catharinacollege Geraardsbergen. Teachers fall down; click or tap them while they drop to launch them back up (+1). Each teacher pops after a random 3–6 clicks (+3 bonus); the ring colour goes green → orange → red as it gets close. Let one hit the ground and you lose a life — 5 lives, then game over with your score. The game text is in Dutch.
 
 ## Adding teacher photos
 

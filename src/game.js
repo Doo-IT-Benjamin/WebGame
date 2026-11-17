@@ -1,5 +1,7 @@
 import { TEACHERS } from './teachers.js';
 import { SHARED, cleanName, topScores, saveScore } from './scores.js';
+import * as sfx from './sound.js';
+import { confetti } from './confetti.js';
 
 // ---- Tuning ---------------------------------------------------------------
 const LIVES = 5;
@@ -110,10 +112,12 @@ function endGame() {
     best = Number(localStorage.getItem('gravity-best') || 0);
     if (score > best) { best = score; localStorage.setItem('gravity-best', String(score)); }
   } catch { best = Math.max(best, score); }
-  $('best').textContent = score >= best && score > 0 ? 'Nieuw persoonlijk record!' : `Jouw record: ${best}`;
+  const personalBest = score >= best && score > 0;
+  $('best').textContent = personalBest ? 'Nieuw persoonlijk record!' : `Jouw record: ${best}`;
   overScreen.hidden = false;
   $('againBtn').focus();
-  submitScore(playerName, score);
+  sfx.gameOver();
+  submitScore(playerName, score, personalBest);
 }
 
 // ---- Player name & highscores ---------------------------------------------
@@ -124,6 +128,7 @@ nameInput.value = playerName;
 
 $('startForm').addEventListener('submit', (e) => {
   e.preventDefault();
+  sfx.unlock();
   const name = cleanName(nameInput.value);
   if (!name) { nameInput.value = ''; nameInput.focus(); return; }
   playerName = name;
@@ -140,7 +145,7 @@ $('changeNameBtn').addEventListener('click', () => {
   nameInput.select();
 });
 
-async function submitScore(name, value) {
+async function submitScore(name, value, personalBest) {
   const status = $('saveStatus');
   if (value < 1) { status.textContent = ''; return; }
   status.textContent = 'Score opslaan…';
@@ -148,11 +153,27 @@ async function submitScore(name, value) {
     await saveScore(name, value);
     const top = await refreshBoard();
     const rank = top.findIndex((s) => s.name.toLowerCase() === name.toLowerCase() && s.score === value);
-    status.textContent = rank >= 0 ? `Je staat op plaats ${rank + 1} in de topscores!` : 'Score opgeslagen.';
+    if (rank === 0) {
+      status.textContent = '🏆 Nieuwe topscore! Jij staat op nummer 1!';
+      celebrate(true);
+    } else if (rank > 0) {
+      status.textContent = `Je staat op plaats ${rank + 1} in de topscores!`;
+      celebrate(false);
+    } else {
+      status.textContent = 'Score opgeslagen.';
+      if (personalBest) celebrate(false);
+    }
   } catch (err) {
     console.error(err);
     status.textContent = 'Score kon niet opgeslagen worden (geen verbinding?).';
+    if (personalBest) celebrate(false);
   }
+}
+
+function celebrate(big) {
+  confetti(big ? 320 : 140);
+  if (big) setTimeout(() => confetti(200), 700);
+  sfx.fanfare(big);
 }
 
 const boardList = $('boardList');
@@ -207,9 +228,11 @@ canvas.addEventListener('pointerdown', (e) => {
     score++;
     if (f.hits >= f.maxHits) {
       score += POP_BONUS;
+      sfx.pop();
       popFace(f);
       pops.push({ x: f.x, y: f.y - R, text: `+${1 + POP_BONUS}`, color: RING_GREEN, t: 0, big: true });
     } else {
+      sfx.bounce(f.hits / f.maxHits);
       launch(f, dx);
       pops.push({ x: f.x, y: f.y - R, text: '+1', color: '#ef4423', t: 0 });
     }
@@ -256,7 +279,7 @@ function launch(f, dx) {
 }
 
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__game = { get faces() { return faces; }, get score() { return score; }, get lives() { return lives; }, get state() { return state; }, get shards() { return shards; }, pause, resume, step: (dt) => { if (state === 'playing') update(dt); draw(); } };
+  window.__game = { get faces() { return faces; }, get score() { return score; }, get lives() { return lives; }, get state() { return state; }, celebrate, sfx, get shards() { return shards; }, pause, resume, step: (dt) => { if (state === 'playing') update(dt); draw(); } };
 }
 
 function pause() {
@@ -292,7 +315,21 @@ window.addEventListener('keydown', (e) => {
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 window.addEventListener('blur', pause);
 
-$('againBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', () => { sfx.unlock(); startGame(); });
+
+// Sound toggle
+const muteBtn = $('muteBtn');
+function showMute() {
+  const m = sfx.isMuted();
+  muteBtn.textContent = m ? '🔇' : '🔊';
+  muteBtn.setAttribute('aria-label', m ? 'Geluid aan' : 'Geluid uit');
+  muteBtn.title = m ? 'Geluid aan (M)' : 'Geluid uit (M)';
+}
+muteBtn.addEventListener('click', () => { sfx.unlock(); sfx.setMuted(!sfx.isMuted()); showMute(); });
+window.addEventListener('keydown', (e) => {
+  if ((e.key === 'm' || e.key === 'M') && e.target !== nameInput) { sfx.unlock(); sfx.setMuted(!sfx.isMuted()); showMute(); }
+});
+showMute();
 
 // ---- Loop -----------------------------------------------------------------
 let last = performance.now();
@@ -334,6 +371,7 @@ function update(dt) {
     if (f.y - R > H) {
       lives--;
       updateHud();
+      if (lives > 0) sfx.miss();
       pops.push({ x: f.x, y: H - 30, text: '−♥', color: '#a61e29', t: 0 });
       f.waiting = RESPAWN_DELAY;
       if (lives <= 0) { endGame(); return; }
