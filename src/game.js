@@ -2,14 +2,16 @@ import { TEACHERS } from './teachers.js';
 
 // ---- Tuning ---------------------------------------------------------------
 const LIVES = 5;
-const GRAVITY_START = 500;      // px/s² at game start
-const GRAVITY_MAX = 1100;       // px/s² cap
-const GRAVITY_RAMP = 8;         // px/s² added per second of play
+// Speeds are in "play-area heights", so the game feels the same in any window size.
+const GRAVITY_START = 0.55;     // heights/s² at game start
+const GRAVITY_MAX = 1.0;        // heights/s² cap
+const GRAVITY_RAMP = 0.006;     // heights/s² added per second of play
+const MAX_FALL_SPEED = 0.85;    // heights/s — terminal velocity so falling teachers stay catchable
 const FIRST_SPAWN_DELAY = 0.5;  // s
 const NEW_FACE_EVERY = 10;      // s between extra faces joining
 const MAX_FACES = 6;
 const RESPAWN_DELAY = 1.2;      // s before a dropped face comes back
-const HIT_SLOP = 1.25;          // click radius multiplier (forgiving on touch)
+const HIT_SLOP = 1.4;           // click radius multiplier (forgiving on touch)
 const MIN_HITS = 3, MAX_HITS = 6; // clicks a teacher takes before popping (random per teacher)
 const POP_BONUS = 3;            // extra points for popping a teacher
 
@@ -61,7 +63,7 @@ let state = 'menu'; // menu | playing | paused | over
 let faces = [];
 let pops = [];      // little "+1" / "-1" effects
 let shards = [];    // burst particles when a teacher pops
-let score = 0, lives = LIVES, elapsed = 0, gravity = GRAVITY_START;
+let score = 0, lives = LIVES, elapsed = 0, gravity = 0; // gravity in px/s²
 let nextFaceAt = 0;
 let deck = [];
 
@@ -74,6 +76,7 @@ function spawnFace(face = {}) {
   face.teacher = nextTeacher();
   face.x = R + Math.random() * (W - 2 * R);
   face.y = -R;
+  face.px = face.x; face.py = face.y;
   face.vx = (Math.random() - 0.5) * 120;
   face.vy = 40;
   face.angle = 0;
@@ -86,7 +89,7 @@ function spawnFace(face = {}) {
 }
 
 function startGame() {
-  score = 0; lives = LIVES; elapsed = 0; gravity = GRAVITY_START;
+  score = 0; lives = LIVES; elapsed = 0; gravity = GRAVITY_START * H;
   faces = []; pops = []; shards = []; deck = [];
   nextFaceAt = FIRST_SPAWN_DELAY;
   state = 'playing';
@@ -124,9 +127,11 @@ canvas.addEventListener('pointerdown', (e) => {
   for (let i = faces.length - 1; i >= 0; i--) {
     const f = faces[i];
     if (f.waiting > 0) continue;
-    const dx = px - f.x, dy = py - f.y;
-    if (dx * dx + dy * dy > (R * HIT_SLOP) ** 2) continue;
-    if (f.vy <= 0) return; // only counts while falling
+    // Test against the path since the last frame, so fast movers aren't missed.
+    const d = distToSegment(px, py, f.px ?? f.x, f.py ?? f.y, f.x, f.y);
+    if (d > R * HIT_SLOP) continue;
+    if (f.vy <= 0) continue; // only counts while falling; a falling one behind it may still be hit
+    const dx = px - f.x;
     f.hits++;
     score++;
     if (f.hits >= f.maxHits) {
@@ -141,6 +146,13 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
 });
+
+function distToSegment(px, py, ax, ay, bx, by) {
+  const vx = bx - ax, vy = by - ay;
+  const len2 = vx * vx + vy * vy;
+  const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / len2)) : 0;
+  return Math.hypot(px - (ax + t * vx), py - (ay + t * vy));
+}
 
 function popFace(f) {
   const n = 18;
@@ -225,7 +237,7 @@ requestAnimationFrame(frame);
 
 function update(dt) {
   elapsed += dt;
-  gravity = Math.min(GRAVITY_MAX, GRAVITY_START + elapsed * GRAVITY_RAMP);
+  gravity = Math.min(GRAVITY_MAX, GRAVITY_START + elapsed * GRAVITY_RAMP) * H;
 
   if (elapsed >= nextFaceAt && faces.length < MAX_FACES) {
     faces.push(spawnFace());
@@ -238,7 +250,8 @@ function update(dt) {
       if (f.waiting <= 0) spawnFace(f);
       continue;
     }
-    f.vy += gravity * dt;
+    f.px = f.x; f.py = f.y;
+    f.vy = Math.min(f.vy + gravity * dt, MAX_FALL_SPEED * H);
     f.x += f.vx * dt;
     f.y += f.vy * dt;
     f.angle += f.spin * dt;
