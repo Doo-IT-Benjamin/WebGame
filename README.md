@@ -15,7 +15,7 @@ Players enter their name before starting; scores go to a shared top-10 list next
 Until Supabase is configured, the list only shows scores from the current device.
 
 1. Create a free project at https://supabase.com.
-2. In the project: **SQL Editor → New query**, paste `supabase/setup.sql`, click **Run**.
+2. In the project: **SQL Editor → New query**, paste `supabase/migrations/20261117000000_create_scores.sql` (or let the Supabase GitHub integration apply it on push), click **Run**.
 3. Copy the **Project URL** and the **publishable / anon public key** into `src/config.js`
    (never the secret / service_role key), then push.
 

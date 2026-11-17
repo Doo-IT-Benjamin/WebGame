@@ -1,5 +1,6 @@
 -- Highscores table for the Zwaartekracht game.
--- Run once in Supabase: SQL Editor → New query → paste → Run.
+-- Applied automatically by the Supabase GitHub integration on push to main,
+-- or run once by hand: SQL Editor → New query → paste → Run.
 
 create table if not exists public.scores (
   id         bigint generated always as identity primary key,
